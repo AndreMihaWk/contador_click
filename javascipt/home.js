@@ -16,6 +16,7 @@ document.addEventListener('click', (e) => {
     if (e.target.id === 'btnEncerrar' || 
         e.target.id === 'btnConfirmar' || 
         e.target.id === 'btnCancelar' ||
+        e.target.id === 'btnRelatorio'||
         e.target.closest('.modal')) {
         return;
     }
@@ -47,7 +48,12 @@ document.getElementById('btnCancelar').addEventListener('click', (e) => {
     e.stopPropagation();
     document.getElementById('modalEncerrar').style.display = 'none';
 });
-
+// ver relarotirio
+document.getElementById('btnRelatorio').addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.location.href = 'relatorio.html';
+})
+// Funções auxiliares
 function atualizarDisplay() {
     document.querySelector('.quantidade').textContent = `[${visitantesDia}]`;
     document.getElementById('totalVisitantes').textContent = totalVisitantes;
