@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VISITANTES</title>
+    <link rel="stylesheet" href="style/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="logo-governo">
+                <img src="php/logo-governo.png" alt="Governo de Roraima">
+            </div>
+            <div class="logo-iater">
+                <img src="php/logo-iater.PNG" alt="IATER">
+            </div>
+        </div>
+        
+        <div class="right-panel">
+            <h1>VISITANTES</h1>
+            <h2>VISITANTES DO DIA</h2>
+            <div class="quantidade">[quantidade]</div>
+            <div class="total-label">TOTAL DE VISITANTES</div>
+            <div class="total-numero" id="totalVisitantes">0</div>
+
+            <button id="btnRelatorio" class="btn-relatorio">📊 Ver Relatório</button>
+            
+            <button id="btnEncerrar" class="btn-encerrar">ENCERRAR DIA</button>
+            <div class="info-data">Data: <span id="dataAtual"></span></div>
+        </div>
+    </div>
+
+
+
+    <div id="modalEncerrar" class="modal">
+        <div class="modal-content">
+            <h3>Confirmar Encerramento do Dia</h3>
+            <p>Deseja encerrar a contagem do dia?</p>
+            <p class="visitantes-dia">Visitantes hoje: <span id="visitantesHoje">0</span></p>
+            <div class="modal-buttons">
+                <button id="btnConfirmar" class="btn-confirmar">Confirmar</button>
+                <button id="btnCancelar" class="btn-cancelar">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="javascipt/home.js"></script>
+</body>
+</html>

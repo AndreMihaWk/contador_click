@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Visitantes</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 36px;
+        }
+
+        .resumo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .card .numero {
+            font-size: 48px;
+            font-weight: bold;
+        }
+
+        .tabela-container {
+            overflow-x: auto;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th {
+            background: #667eea;
+            color: white;
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        tr:hover {
+            background: #f5f5f5;
+        }
+
+        .status {
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .status.encerrado {
+            background: #f44336;
+            color: white;
+        }
+
+        .status.ativo {
+            background: #4caf50;
+            color: white;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        .btn-voltar {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-voltar:hover {
+            background: #45a049;
+        }
+
+        .btn-atualizar {
+            background: #2196f3;
+            color: white;
+        }
+
+        .btn-atualizar:hover {
+            background: #0b7dda;
+        }
+
+        .btn-limpar {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-limpar:hover {
+            background: #da190b;
+        }
+
+        .sem-dados {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 18px;
+        }
+
+        .data-atual {
+            text-align: center;
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Relatório de Visitantes</h1>
+        <div class="data-atual">Última atualização: <span id="dataAtualizacao"></span></div>
+
+        <div class="resumo">
+            <div class="card">
+                <h3>VISITANTES HOJE</h3>
+                <div class="numero" id="visitantesHoje">0</div>
+            </div>
+            <div class="card">
+                <h3>TOTAL ACUMULADO</h3>
+                <div class="numero" id="totalAcumulado">0</div>
+            </div>
+            <div class="card">
+                <h3>STATUS DO DIA</h3>
+                <div class="numero" id="statusDia" style="font-size: 24px;">-</div>
+            </div>
+        </div>
+
+        <h2 style="margin-bottom: 20px; color: #333;">📅 Histórico Detalhado</h2>
+        
+        <div class="tabela-container">
+            <table id="tabelaHistorico">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Visitantes do Dia</th>
+                        <th>Total Acumulado</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody id="corpoTabela">
+                    <tr>
+                        <td colspan="4" class="sem-dados">Carregando dados...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="botoes">
+            <button class="btn-voltar" onclick="window.location.href='index.html'">
+                ← Voltar para Contagem
+            </button>
+            <button class="btn-atualizar" onclick="carregarDados()">
+                🔄 Atualizar
+            </button>
+            <button class="btn-limpar" onclick="confirmarLimpar()">
+                🗑️ Limpar Histórico
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function carregarDados() {
+            fetch('carregar.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data) {
+                        // Atualizar cards
+                        document.getElementById('visitantesHoje').textContent = data.visitantesDia || 0;
+                        document.getElementById('totalAcumulado').textContent = data.totalVisitantes || 0;
+                        
+                        const statusDia = data.diaEncerrado ? 'ENCERRADO' : 'ATIVO';
+                        document.getElementById('statusDia').textContent = statusDia;
+                        document.getElementById('statusDia').style.color = data.diaEncerrado ? '#f44336' : '#4caf50';
+                        
+                        document.getElementById('dataAtualizacao').textContent = 
+                            new Date().toLocaleString('pt-BR');
+                        
+                        // Atualizar tabela
+                        atualizarTabela(data);
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao carregar dados:', error);
+                    document.getElementById('corpoTabela').innerHTML = 
+                        '<tr><td colspan="4" class="sem-dados">Erro ao carregar dados</td></tr>';
+                });
+        }
+
+        function atualizarTabela(data) {
+            const tbody = document.getElementById('corpoTabela');
+            
+            if (!data || data.totalVisitantes === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" class="sem-dados">Nenhum dado registrado ainda</td></tr>';
+                return;
+            }
+
+            // Criar linha com os dados atuais
+            const statusClass = data.diaEncerrado ? 'encerrado' : 'ativo';
+            const statusTexto = data.diaEncerrado ? 'Encerrado' : 'Ativo';
+            
+            tbody.innerHTML = `
+                <tr>
+                    <td><strong>${data.data}</strong></td>
+                    <td>${data.visitantesDia}</td>
+                    <td><strong>${data.totalVisitantes}</strong></td>
+                    <td><span class="status ${statusClass}">${statusTexto}</span></td>
+                </tr>
+            `;
+        }
+
+        function confirmarLimpar() {
+            if (confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODO o histórico?\nEsta ação não pode ser desfeita!')) {
+                if (confirm('Tem certeza absoluta? Todos os dados serão perdidos!')) {
+                    limparHistorico();
+                }
+            }
+        }
+
+        function limparHistorico() {
+            fetch('limpar.php', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ Histórico limpo com sucesso!');
+                    carregarDados();
+                } else {
+                    alert('❌ Erro ao limpar histórico');
+                }
+            });
+        }
+
+        // Carregar dados ao abrir a página
+        window.addEventListener('load', carregarDados);
+
+        // Atualizar automaticamente a cada 30 segundos
+        setInterval(carregarDados, 30000);
+    </script>
+</body>
+</html>
