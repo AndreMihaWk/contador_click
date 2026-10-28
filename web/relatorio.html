@@ -85,8 +85,16 @@
             border-bottom: 1px solid #ddd;
         }
 
-        tr:hover {
+        tbody tr:hover {
             background: #f5f5f5;
+        }
+
+        tfoot td {
+            background: #eef0fd;
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+            border-bottom: none;
         }
 
         .status {
@@ -96,14 +104,24 @@
             font-weight: bold;
         }
 
-        .status.encerrado {
-            background: #f44336;
+        .status.fechado {
+            background: #607d8b;
             color: white;
         }
 
         .status.ativo {
             background: #4caf50;
             color: white;
+        }
+
+        .baixar {
+            color: #667eea;
+            font-weight: bold;
+            text-decoration: none;
+        }
+
+        .baixar:hover {
+            text-decoration: underline;
         }
 
         .botoes {
@@ -141,13 +159,13 @@
             background: #0b7dda;
         }
 
-        .btn-limpar {
-            background: #f44336;
+        .btn-baixar {
+            background: #607d8b;
             color: white;
         }
 
-        .btn-limpar:hover {
-            background: #da190b;
+        .btn-baixar:hover {
+            background: #455a64;
         }
 
         .sem-dados {
@@ -180,21 +198,21 @@
                 <div class="numero" id="totalAcumulado">0</div>
             </div>
             <div class="card">
-                <h3>STATUS DO DIA</h3>
-                <div class="numero" id="statusDia" style="font-size: 24px;">-</div>
+                <h3>DIAS EM FUNCIONAMENTO</h3>
+                <div class="numero" id="diasFuncionando">0</div>
             </div>
         </div>
 
         <h2 style="margin-bottom: 20px; color: #333;">📅 Histórico Detalhado</h2>
-        
+
         <div class="tabela-container">
             <table id="tabelaHistorico">
                 <thead>
                     <tr>
                         <th>Data</th>
                         <th>Visitantes do Dia</th>
-                        <th>Total Acumulado</th>
                         <th>Status</th>
+                        <th>Relatório</th>
                     </tr>
                 </thead>
                 <tbody id="corpoTabela">
@@ -202,93 +220,78 @@
                         <td colspan="4" class="sem-dados">Carregando dados...</td>
                     </tr>
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td>TOTAL DE VISITANTES</td>
+                        <td id="totalTabela" colspan="3">0</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
         <div class="botoes">
-            <button class="btn-voltar" onclick="window.location.href='index.html'">
-                ← Voltar para Contagem
+            <button class="btn-voltar" onclick="window.location.href='/'">
+                ← Voltar para o Telão
             </button>
             <button class="btn-atualizar" onclick="carregarDados()">
                 🔄 Atualizar
             </button>
-            <button class="btn-limpar" onclick="confirmarLimpar()">
-                🗑️ Limpar Histórico
+            <button class="btn-baixar" onclick="window.location.href='/api/relatorio/completo.csv'">
+                ⬇ Baixar Relatório Completo
             </button>
         </div>
     </div>
 
     <script>
-        function carregarDados() {
-            fetch('carregar.php')
-                .then(response => response.json())
-                .then(data => {
-                    if (data) {
-                        // Atualizar cards
-                        document.getElementById('visitantesHoje').textContent = data.visitantesDia || 0;
-                        document.getElementById('totalAcumulado').textContent = data.totalVisitantes || 0;
-                        
-                        const statusDia = data.diaEncerrado ? 'ENCERRADO' : 'ATIVO';
-                        document.getElementById('statusDia').textContent = statusDia;
-                        document.getElementById('statusDia').style.color = data.diaEncerrado ? '#f44336' : '#4caf50';
-                        
-                        document.getElementById('dataAtualizacao').textContent = 
-                            new Date().toLocaleString('pt-BR');
-                        
-                        // Atualizar tabela
-                        atualizarTabela(data);
-                    }
-                })
-                .catch(error => {
-                    console.error('Erro ao carregar dados:', error);
-                    document.getElementById('corpoTabela').innerHTML = 
-                        '<tr><td colspan="4" class="sem-dados">Erro ao carregar dados</td></tr>';
-                });
+        async function carregarDados() {
+            try {
+                const [contagem, dias] = await Promise.all([
+                    fetch('/api/contagem').then(resposta => resposta.json()),
+                    fetch('/api/historico').then(resposta => resposta.json()),
+                ]);
+
+                document.getElementById('visitantesHoje').textContent = formatarNumero(contagem.hoje);
+                document.getElementById('totalAcumulado').textContent = formatarNumero(contagem.acumulado);
+                document.getElementById('diasFuncionando').textContent = contagem.dias;
+                document.getElementById('totalTabela').textContent = formatarNumero(contagem.acumulado);
+                document.getElementById('dataAtualizacao').textContent = new Date().toLocaleString('pt-BR');
+
+                atualizarTabela(dias);
+            } catch (error) {
+                console.error('Erro ao carregar dados:', error);
+                document.getElementById('corpoTabela').innerHTML =
+                    '<tr><td colspan="4" class="sem-dados">Erro ao carregar dados</td></tr>';
+            }
         }
 
-        function atualizarTabela(data) {
+        function atualizarTabela(dias) {
             const tbody = document.getElementById('corpoTabela');
-            
-            if (!data || data.totalVisitantes === 0) {
+
+            if (dias.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="4" class="sem-dados">Nenhum dado registrado ainda</td></tr>';
                 return;
             }
 
-            // Criar linha com os dados atuais
-            const statusClass = data.diaEncerrado ? 'encerrado' : 'ativo';
-            const statusTexto = data.diaEncerrado ? 'Encerrado' : 'Ativo';
-            
-            tbody.innerHTML = `
-                <tr>
-                    <td><strong>${data.data}</strong></td>
-                    <td>${data.visitantesDia}</td>
-                    <td><strong>${data.totalVisitantes}</strong></td>
-                    <td><span class="status ${statusClass}">${statusTexto}</span></td>
-                </tr>
-            `;
+            tbody.innerHTML = dias.map(dia => {
+                const fechado = dia.relatorio_gerado_em !== null;
+                return `
+                    <tr>
+                        <td><strong>${formatarData(dia.data)}</strong></td>
+                        <td>${formatarNumero(dia.total)}</td>
+                        <td><span class="status ${fechado ? 'fechado' : 'ativo'}">${fechado ? 'Fechado' : 'Em andamento'}</span></td>
+                        <td><a class="baixar" href="/api/relatorio/${dia.data}.csv">⬇ Baixar CSV</a></td>
+                    </tr>
+                `;
+            }).join('');
         }
 
-        function confirmarLimpar() {
-            if (confirm('⚠️ ATENÇÃO!\n\nDeseja realmente limpar TODO o histórico?\nEsta ação não pode ser desfeita!')) {
-                if (confirm('Tem certeza absoluta? Todos os dados serão perdidos!')) {
-                    limparHistorico();
-                }
-            }
+        function formatarNumero(numero) {
+            return numero.toLocaleString('pt-BR');
         }
 
-        function limparHistorico() {
-            fetch('limpar.php', {
-                method: 'POST'
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    alert('✅ Histórico limpo com sucesso!');
-                    carregarDados();
-                } else {
-                    alert('❌ Erro ao limpar histórico');
-                }
-            });
+        function formatarData(dataIso) {
+            const [ano, mes, dia] = dataIso.split('-');
+            return `${dia}/${mes}/${ano}`;
         }
 
         // Carregar dados ao abrir a página

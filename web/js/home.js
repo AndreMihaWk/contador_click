@@ -1,106 +1,84 @@
-let visitantesDia = 0;
-let totalVisitantes = 0;
-let dataAtual = new Date().toLocaleDateString('pt-BR');
-let diaEncerrado = false;
+const INTERVALO_MS = 2000;
+let contando = null;
 
-// Carregar dados ao iniciar
+// Carregar dados ao iniciar e atualizar periodicamente
 window.addEventListener('load', () => {
-    carregarDados();
-    atualizarDisplay();
-    document.getElementById('dataAtual').textContent = dataAtual;
+    atualizar();
+    setInterval(atualizar, INTERVALO_MS);
 });
 
-// Contabilizar visita ao clicar na tela
-document.addEventListener('click', (e) => {
-    // Não contar cliques nos botões do modal e botão encerrar
-    if (e.target.id === 'btnEncerrar' || 
-        e.target.id === 'btnConfirmar' || 
-        e.target.id === 'btnCancelar' ||
-        e.target.id === 'btnRelatorio'||
-        e.target.closest('.modal')) {
+// Mesmo botão inicia e encerra a contagem
+document.getElementById('btnContagem').addEventListener('click', async () => {
+    if (contando && !confirm('Encerrar a contagem?\nO relatório de hoje será salvo.')) {
         return;
     }
-    
-    if (!diaEncerrado) {
-        visitantesDia++;
-        totalVisitantes++;
-        atualizarDisplay();
-        salvarDados();
+    const acao = contando ? 'encerrar' : 'iniciar';
+    try {
+        const resposta = await fetch(`/api/contagem/${acao}`, { method: 'POST' });
+        mostrar(await resposta.json());
+    } catch (erro) {
+        mostrarAviso('⚠ Sistema fora do ar');
     }
 });
 
-// Botão encerrar dia
-document.getElementById('btnEncerrar').addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('visitantesHoje').textContent = visitantesDia;
-    document.getElementById('modalEncerrar').style.display = 'block';
+document.getElementById('btnRelatorio').addEventListener('click', () => {
+    window.location.href = '/relatorio';
 });
 
-// Confirmar encerramento
-document.getElementById('btnConfirmar').addEventListener('click', (e) => {
-    e.stopPropagation();
-    encerrarDia();
-    document.getElementById('modalEncerrar').style.display = 'none';
+document.getElementById('btnArea').addEventListener('click', () => {
+    window.location.href = '/camera';
 });
 
-// Cancelar encerramento
-document.getElementById('btnCancelar').addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('modalEncerrar').style.display = 'none';
-});
-// ver relarotirio
-document.getElementById('btnRelatorio').addEventListener('click', (e) => {
-    e.stopPropagation();
-    window.location.href = 'relatorio.html';
-})
-// Funções auxiliares
-function atualizarDisplay() {
-    document.querySelector('.quantidade').textContent = `[${visitantesDia}]`;
-    document.getElementById('totalVisitantes').textContent = totalVisitantes;
+async function atualizar() {
+    try {
+        const resposta = await fetch('/api/contagem');
+        mostrar(await resposta.json());
+    } catch (erro) {
+        mostrarAviso('⚠ Sistema fora do ar');
+    }
 }
 
-function salvarDados() {
-    fetch('salvar.php', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            visitantesDia: visitantesDia,
-            totalVisitantes: totalVisitantes,
-            data: dataAtual,
-            diaEncerrado: diaEncerrado
-        })
-    });
+function mostrar(dados) {
+    document.querySelector('.quantidade').textContent = `[${formatarNumero(dados.hoje)}]`;
+    document.getElementById('totalVisitantes').textContent = formatarNumero(dados.acumulado);
+    document.getElementById('diasFuncionando').textContent = dados.dias;
+    document.getElementById('dataAtual').textContent = formatarData(dados.data);
+
+    if (dados.contando !== contando) {
+        contando = dados.contando;
+        const botao = document.getElementById('btnContagem');
+        botao.textContent = contando ? '■ ENCERRAR CONTAGEM' : '▶ INICIAR CONTAGEM';
+        botao.classList.toggle('ativo', contando);
+        document.getElementById('acoesParado').hidden = contando;
+
+        // A imagem da câmera só fica no telão enquanto conta
+        const camera = document.getElementById('cameraAoVivo');
+        camera.hidden = !contando;
+        if (contando) {
+            camera.src = '/video';
+        } else {
+            camera.removeAttribute('src');
+        }
+    }
+
+    if (contando && !dados.camera_ok) {
+        mostrarAviso('⚠ Câmera sem sinal');
+    } else {
+        document.getElementById('avisoCamera').hidden = true;
+    }
 }
 
-function carregarDados() {
-    fetch('carregar.php')
-        .then(response => response.json())
-        .then(data => {
-            if (data) {
-                const dataArmazenada = data.data;
-                const hoje = new Date().toLocaleDateString('pt-BR');
-                
-                // Se a data mudou, resetar contagem do dia
-                if (dataArmazenada !== hoje) {
-                    visitantesDia = 0;
-                    dataAtual = hoje;
-                    diaEncerrado = false;
-                    totalVisitantes = data.totalVisitantes || 0;
-                } else {
-                    // Mesma data, carregar dados
-                    visitantesDia = data.visitantesDia || 0;
-                    totalVisitantes = data.totalVisitantes || 0;
-                    diaEncerrado = data.diaEncerrado || false;
-                }
-            }
-            atualizarDisplay();
-        });
+function mostrarAviso(texto) {
+    const aviso = document.getElementById('avisoCamera');
+    aviso.textContent = texto;
+    aviso.hidden = false;
 }
 
-function encerrarDia() {
-    diaEncerrado = true;
-    salvarDados();
-    alert('Dia encerrado com sucesso!\nVisitantes do dia: ' + visitantesDia);
+function formatarNumero(numero) {
+    return numero.toLocaleString('pt-BR');
+}
+
+function formatarData(dataIso) {
+    const [ano, mes, dia] = dataIso.split('-');
+    return `${dia}/${mes}/${ano}`;
 }

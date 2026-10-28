@@ -1,0 +1,13 @@
+{
+  "camera_indice": 1,
+  "area": [
+    0.32,
+    0.068,
+    0.632,
+    1.0
+  ],
+  "tempo_minimo_s": 1.0,
+  "confianca_minima": 0.4,
+  "modelo": "yolo11n.pt",
+  "porta": 5000
+}

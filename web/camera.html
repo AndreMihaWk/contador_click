@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Área da Câmera</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #222;
+            color: #eee;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        .dica {
+            margin-bottom: 15px;
+            color: #ccc;
+            line-height: 1.5;
+        }
+
+        .palco {
+            position: relative;
+        }
+
+        .video {
+            display: block;
+            width: 100%;
+            min-height: 200px;
+            background: #000;
+            border-radius: 8px;
+        }
+
+        .desenho {
+            position: absolute;
+            top: 0;
+            left: 0;
+            cursor: crosshair;
+            touch-action: none;
+        }
+
+        .botoes {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+            align-items: center;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-salvar {
+            background: #4caf50;
+        }
+
+        .btn-inteira {
+            background: #607d8b;
+        }
+
+        .btn-voltar {
+            background: #2196f3;
+        }
+
+        .mensagem {
+            font-weight: bold;
+        }
+
+        .mensagem.erro {
+            color: #f44336;
+        }
+
+        .instrucoes {
+            margin-top: 20px;
+            line-height: 1.6;
+            color: #ccc;
+        }
+
+        .instrucoes code {
+            background: #444;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>✏️ Área de captação</h1>
+        <p class="dica">Clique e arraste sobre a imagem para desenhar a área do estande. Depois clique em <strong>Salvar área</strong>.</p>
+
+        <div class="palco">
+            <img id="video" class="video" src="/video" alt="Imagem da câmera (aguardando sinal...)">
+            <canvas id="desenho" class="desenho"></canvas>
+        </div>
+
+        <div class="botoes">
+            <button id="btnSalvar" class="btn-salvar" disabled>💾 Salvar área</button>
+            <button id="btnInteira" class="btn-inteira">⬜ Usar imagem inteira</button>
+            <button class="btn-voltar" onclick="window.location.href='/'">← Voltar para o telão</button>
+            <span id="mensagem" class="mensagem"></span>
+        </div>
+
+        <div class="instrucoes">
+            <p>O retângulo desenhado na própria imagem é a <strong>área salva</strong>: vermelho com a contagem parada, verde contando. O retângulo amarelo tracejado é o que você está desenhando agora.</p>
+            <p>Cada pessoa que ficar dentro da área por pelo menos <code>tempo_minimo_s</code> segundos (no <code>config.json</code>, padrão 1) conta como 1 visitante, uma única vez.</p>
+        </div>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const tela = document.getElementById('desenho');
+        const contexto = tela.getContext('2d');
+        const btnSalvar = document.getElementById('btnSalvar');
+        const TAMANHO_MINIMO = 0.02;
+
+        let inicio = null;    // ponto onde o arraste começou, em fração (0 a 1) da imagem
+        let selecao = null;   // [x1, y1, x2, y2] em fração da imagem
+
+        // A tela de desenho acompanha o tamanho da imagem da câmera
+        new ResizeObserver(() => {
+            tela.width = video.clientWidth;
+            tela.height = video.clientHeight;
+            desenhar();
+        }).observe(video);
+
+        tela.addEventListener('pointerdown', (e) => {
+            tela.setPointerCapture(e.pointerId);
+            inicio = pontoNaImagem(e);
+            selecao = null;
+            mensagem('');
+            desenhar();
+        });
+
+        tela.addEventListener('pointermove', (e) => {
+            if (!inicio) return;
+            const [x, y] = pontoNaImagem(e);
+            selecao = [
+                Math.min(inicio[0], x), Math.min(inicio[1], y),
+                Math.max(inicio[0], x), Math.max(inicio[1], y),
+            ];
+            desenhar();
+        });
+
+        tela.addEventListener('pointerup', () => {
+            inicio = null;
+            // Um clique sem arrastar não vira área
+            if (selecao && (selecao[2] - selecao[0] < TAMANHO_MINIMO || selecao[3] - selecao[1] < TAMANHO_MINIMO)) {
+                selecao = null;
+            }
+            btnSalvar.disabled = !selecao;
+            desenhar();
+        });
+
+        btnSalvar.addEventListener('click', () => salvar(selecao));
+        document.getElementById('btnInteira').addEventListener('click', () => salvar([0, 0, 1, 1]));
+
+        function pontoNaImagem(evento) {
+            const retangulo = tela.getBoundingClientRect();
+            return [
+                limitar((evento.clientX - retangulo.left) / retangulo.width),
+                limitar((evento.clientY - retangulo.top) / retangulo.height),
+            ];
+        }
+
+        function limitar(valor) {
+            return Math.min(1, Math.max(0, valor));
+        }
+
+        function desenhar() {
+            contexto.clearRect(0, 0, tela.width, tela.height);
+            if (!selecao) return;
+            const [x1, y1, x2, y2] = selecao;
+            const x = x1 * tela.width;
+            const y = y1 * tela.height;
+            const largura = (x2 - x1) * tela.width;
+            const altura = (y2 - y1) * tela.height;
+            contexto.fillStyle = 'rgba(255, 193, 7, 0.25)';
+            contexto.fillRect(x, y, largura, altura);
+            contexto.strokeStyle = '#ffc107';
+            contexto.lineWidth = 3;
+            contexto.setLineDash([10, 6]);
+            contexto.strokeRect(x, y, largura, altura);
+        }
+
+        async function salvar(area) {
+            try {
+                const resposta = await fetch('/api/area', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ area }),
+                });
+                if (!resposta.ok) throw new Error(resposta.status);
+                selecao = null;
+                btnSalvar.disabled = true;
+                desenhar();
+                mensagem('✅ Área salva! A contagem já usa a nova área.');
+            } catch (erro) {
+                mensagem('Não foi possível salvar a área.', true);
+            }
+        }
+
+        function mensagem(texto, erro = false) {
+            const elemento = document.getElementById('mensagem');
+            elemento.textContent = texto;
+            elemento.classList.toggle('erro', erro);
+        }
+    </script>
+</body>
+</html>

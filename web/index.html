@@ -4,46 +4,37 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VISITANTES</title>
-    <link rel="stylesheet" href="style/style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
     <div class="container">
         <div class="left-panel">
             <div class="logo-governo">
-                <img src="php/food.jpg" alt="Governo de Roraima">
+                <img src="img/food.jpg" alt="Governo de Roraima">
             </div>
 
         </div>
-        
+
         <div class="right-panel">
+            <div id="acoesParado" class="acoes-parado" hidden>
+                <button id="btnRelatorio" class="btn-acao">📊 Relatório</button>
+                <button id="btnArea" class="btn-acao">✏️ Área da Câmera</button>
+            </div>
+            <button id="btnContagem" class="btn-contagem">▶ INICIAR CONTAGEM</button>
+
             <h1>VISITANTES</h1>
             <h2>VISITANTES DO DIA</h2>
-            <div class="quantidade">[quantidade]</div>
+            <div class="quantidade">[0]</div>
             <div class="total-label">TOTAL DE VISITANTES</div>
             <div class="total-numero" id="totalVisitantes">0</div>
+            <div class="total-dias">em <span id="diasFuncionando">0</span> dia(s) de funcionamento</div>
 
-            
-            
-            <button id="btnEncerrar" class="btn-encerrar">ENCERRAR DIA</button>
+            <img id="cameraAoVivo" class="camera-ao-vivo" alt="Câmera ao vivo" hidden>
+            <div id="avisoCamera" class="aviso-camera" hidden></div>
             <div class="info-data">Data: <span id="dataAtual"></span></div>
-            <button id="btnRelatorio" class="btn-relatorio" >📊 Ver Relatório</button>
         </div>
     </div>
 
-
-
-    <div id="modalEncerrar" class="modal">
-        <div class="modal-content">
-            <h3>Confirmar Encerramento do Dia</h3>
-            <p>Deseja encerrar a contagem do dia?</p>
-            <p class="visitantes-dia">Visitantes hoje: <span id="visitantesHoje">0</span></p>
-            <div class="modal-buttons">
-                <button id="btnConfirmar" class="btn-confirmar">Confirmar</button>
-                <button id="btnCancelar" class="btn-cancelar">Cancelar</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="javascipt/home.js"></script>
+    <script src="js/home.js"></script>
 </body>
 </html>
